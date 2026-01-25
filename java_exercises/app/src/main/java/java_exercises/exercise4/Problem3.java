@@ -1,4 +1,4 @@
-package java_exercises.exercise2;
+package java_exercises.exercise4;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Problem2 {
+public class Problem3 {
     
 
     public static void main(String args[]) {
@@ -42,9 +42,11 @@ class Service implements Runnable {
     public void run() {
         Response res;
 
-        if(this.cache.lastNum == this.req.num) {
+        Cache curr = this.cache.getCache();
+
+        if(curr.lastNum == this.req.num) {
             System.out.println("Using cache");
-            res = new Response(req.num, this.cache.lastFactors);
+            res = new Response(req.num, curr.lastFactors);
         } else {
             res = new Response(req.num, factor(req.num));
             cache.updateCache(res.num, res.factors);
@@ -84,38 +86,49 @@ class Service implements Runnable {
 
 class Request {
 
-    int num;
+  int num;
 
-    public Request(int num) {
-        this.num = num;
-    }
+  public Request(int num) {
+    this.num = num;
+  }
 }
 
 class Response {
 
-    int num;
-    List<Integer> factors;
+  int num;
+  List<Integer> factors;
 
-    public Response(int num, List<Integer> factors) {
-        this.num = num;
-        this.factors = factors;
-    }
+  public Response(int num, List<Integer> factors) {
+    this.num = num;
+    this.factors = factors;
+  }
 }
 
 class Cache {
-    public int lastNum;
-    public List<Integer> lastFactors;
-    public ReentrantLock lock = new ReentrantLock();
+  public int lastNum;
+  public List<Integer> lastFactors;
+  public ReentrantLock lock = new ReentrantLock();
 
-    public Cache(int lastNum, List<Integer> lastFactors) {
-        this.lastNum = lastNum;
-        this.lastFactors = lastFactors;
+  public Cache(int lastNum, List<Integer> lastFactors) {
+    this.lastNum = lastNum;
+    this.lastFactors = lastFactors;
+  }
+
+  public Cache getCache() {
+    lock.lock();
+    try {
+      return new Cache(this.lastNum, this.lastFactors);
+    } finally {
+      lock.unlock();
     }
+  }
 
-    public void updateCache(int newNum, List<Integer> newFactors) {
-        this.lastNum = newNum;
-        this.lastFactors = newFactors;
+  public void updateCache(int newNum, List<Integer> newFactors) {
+    lock.lock();
+    this.lastNum = newNum;
+    this.lastFactors = newFactors;
+    lock.unlock();
 
-        // System.out.printf("Current Cache: %d  -  %s%n", this.lastNum, this.lastFactors);
-    }
+    // System.out.printf("Current Cache: %d  -  %s%n", this.lastNum, this.lastFactors);
+  }
 }
