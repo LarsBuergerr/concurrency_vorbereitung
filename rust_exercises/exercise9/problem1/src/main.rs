@@ -3,20 +3,43 @@ use std::thread;
 use std::time::Duration;
 
 fn main() {
-    let (tx, rx) = mpsc::channel();
+    let (account, tx) = Account::new();
+
     thread::spawn(move || {
-        let vals = vec![
-            String::from("hi"), String::from("from"),
-            String::from("the"), String::from("thread")
-        ];
-        for val in vals {
-            tx.send(val).unwrap();
-            thread::sleep(Duration::from_secs(1));
+        account.run();
+    });
+
+    let deposit_tx = tx.clone();
+    let deposit_thread = thread::spawn(move || {
+        for _ in 0..5 {
+            deposit_tx
+                .send(AccountMessage {
+                    command: 0,
+                    amount: 10,
+                })
+                .unwrap();
+            thread::sleep(Duration::from_millis(500));
         }
     });
-    for received in rx {
-        println!("Got: {received}");
-    }
+
+    let withdraw_tx = tx.clone();
+    let withdraw_thread = thread::spawn(move || {
+        for _ in 0..5 {
+            withdraw_tx
+                .send(AccountMessage {
+                    command: 1,
+                    amount: 5,
+                })
+                .unwrap();
+            thread::sleep(Duration::from_millis(700));
+        }
+    });
+
+    deposit_thread.join().unwrap();
+    withdraw_thread.join().unwrap();
+
+    thread::sleep(Duration::from_secs(2));
+
 }
 
 
@@ -50,6 +73,8 @@ impl Account {
             } else if received.command == 1 {
                 self.balance-=received.amount;
             }
+
+            println!("Current balance = {}", self.balance);
         }
     }
 }
