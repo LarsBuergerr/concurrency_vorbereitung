@@ -29,29 +29,21 @@ class YYY {
   void register(ToBeImmutable tbi) {this.tbi = tbi;}
 }
 
-
 class ToBeImmutable {
-  private final int age;
-  private final String name;
-  private final XXX xxx;
+  private int age;
+  private String name;
+  private XXX xxx;
 
-  public ToBeImmutable(int age, String name, XXX xxx) {
+  public ToBeImmutable(int age, String name, XXX xxx, YYY yyy) {
     this.age = age;
     this.name = name;
-    this.xxx = new XXX(xxx);
-  }
-
-  public ToBeImmutable getInstance(int age, String name, XXX xxx, YYY yyy) {
-    ToBeImmutable tbi = new ToBeImmutable(age, name, xxx);
-    yyy.register(tbi);
-    return tbi;
+    this.xxx = xxx;
+    yyy.register(this); // problem
   }
 
   public int getAge() {return age;}
   public String getName() {return name;}
-  public XXX getXxx() { return new XXX(xxx);}
+  public XXX getXxx() { return xxx;}
 
-  public ToBeImmutable setAge(int age) { 
-    return new ToBeImmutable(age, name, xxx);
-  }
+  public void setAge(int age) { this.age = age;}
 }
