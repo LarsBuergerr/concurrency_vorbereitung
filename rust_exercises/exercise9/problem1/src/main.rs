@@ -11,26 +11,37 @@ fn main() {
 
     let deposit_tx = tx.clone();
     let deposit_thread = thread::spawn(move || {
+
         for _ in 0..5 {
+            let (tx_back, rx_back): (Sender<u64>, Receiver<u64>) = mpsc::channel();
             deposit_tx
                 .send(AccountMessage {
                     command: 0,
                     amount: 10,
+                    sender: tx_back,
                 })
                 .unwrap();
+
+            let received = rx_back.recv().unwrap();
+            println!("Current balance after deposit = {}", received);
             thread::sleep(Duration::from_millis(500));
         }
     });
 
     let withdraw_tx = tx.clone();
     let withdraw_thread = thread::spawn(move || {
+        
         for _ in 0..5 {
+            let (tx_back, rx_back): (Sender<u64>, Receiver<u64>) = mpsc::channel();
             withdraw_tx
                 .send(AccountMessage {
                     command: 1,
                     amount: 5,
+                    sender: tx_back,
                 })
                 .unwrap();
+            let received = rx_back.recv().unwrap();
+            println!("Current balance after withdraw = {}", received);
             thread::sleep(Duration::from_millis(700));
         }
     });
@@ -46,6 +57,7 @@ fn main() {
 struct AccountMessage {
     command: u64,
     amount: u64,
+    sender: Sender<u64>,
 }
 
 struct Account {
@@ -65,16 +77,14 @@ impl Account {
     }
 
     fn run(mut self) {
-        loop {
-            let received = self.receiver.recv().unwrap();
+        while let Ok(received) = self.receiver.recv() {
 
             if received.command == 0 {
                 self.balance+=received.amount;
-            } else if received.command == 1 {
+            } else if received.command == 1 && self.balance >= received.amount {
                 self.balance-=received.amount;
             }
-
-            println!("Current balance = {}", self.balance);
+            received.sender.send(self.balance).unwrap();
         }
     }
 }
