@@ -1,42 +1,58 @@
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
+use std::time::Duration;
 
 fn main() {
-
     let (account, tx) = Account::new();
-    let sender_transmit = tx.clone();
-    let sender_withdraw = tx.clone();
 
     thread::spawn(move || {
         account.run();
     });
 
-
+    let deposit_tx = tx.clone();
     let deposit_thread = thread::spawn(move || {
-        for _ in 0..5 {
-            let (t_back, r_back): (Sender<u64>, Receiver<u64>) = mpsc::channel();
-            sender_transmit.send(AccountMessage { command: 0, amount: 10, sender: t_back }).unwrap();
 
-            let received = r_back.recv().unwrap();
-            println!("Current balance after deposit {}", received);
-        };
+        for _ in 0..5 {
+            let (tx_back, rx_back): (Sender<u64>, Receiver<u64>) = mpsc::channel();
+            deposit_tx
+                .send(AccountMessage {
+                    command: 0,
+                    amount: 10,
+                    sender: tx_back,
+                })
+                .unwrap();
+
+            let received = rx_back.recv().unwrap();
+            println!("Current balance after deposit = {}", received);
+            thread::sleep(Duration::from_millis(500));
+        }
     });
 
+    let withdraw_tx = tx.clone();
     let withdraw_thread = thread::spawn(move || {
+        
         for _ in 0..5 {
-            let (t_back, r_back): (Sender<u64>, Receiver<u64>) = mpsc::channel();
-            sender_withdraw.send(AccountMessage { command: 1, amount: 5, sender: t_back }).unwrap();
-
-            let received = r_back.recv().unwrap();
-            println!("Current balance after withdraw {}", received);
+            let (tx_back, rx_back): (Sender<u64>, Receiver<u64>) = mpsc::channel();
+            withdraw_tx
+                .send(AccountMessage {
+                    command: 1,
+                    amount: 5,
+                    sender: tx_back,
+                })
+                .unwrap();
+            let received = rx_back.recv().unwrap();
+            println!("Current balance after withdraw = {}", received);
+            thread::sleep(Duration::from_millis(700));
         }
     });
 
     deposit_thread.join().unwrap();
     withdraw_thread.join().unwrap();
 
-    drop(tx);
+    thread::sleep(Duration::from_secs(2));
+
 }
+
 
 struct AccountMessage {
     command: u64,
